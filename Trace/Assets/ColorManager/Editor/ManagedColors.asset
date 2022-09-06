@@ -16,11 +16,11 @@ MonoBehaviour:
   - _category: skybox
     _color: {r: 0.9849716, g: 0.48584908, b: 1, a: 1}
   - _category: Primary
-    _color: {r: 1, g: 0.9882353, b: 0, a: 1}
+    _color: {r: 0.11764707, g: 0.98823535, b: 0.62352943, a: 1}
   - _category: PrimaryVarient
-    _color: {r: 0.9764706, g: 0.21568628, b: 0.34901962, a: 1}
+    _color: {r: 0.5235849, g: 1, b: 0.7225005, a: 1}
   - _category: Secondary
-    _color: {r: 0.03137255, g: 0.65882355, b: 0.95686275, a: 1}
+    _color: {r: 0.027450982, g: 0.7019608, b: 0.41960788, a: 1}
   - _category: SecondaryVarient
     _color: {r: 0.3647059, g: 0.6392157, b: 0.98039216, a: 1}
   - _category: Boarder
