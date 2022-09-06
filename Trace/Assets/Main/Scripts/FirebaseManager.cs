@@ -1,16 +1,21 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Firebase;
 using Firebase.Auth;
 using Firebase.Database;
 using TMPro;
 using System.Linq;
+using System.Threading.Tasks;
 using Firebase.Extensions;
 using Firebase.Storage;
 using Unity.VisualScripting;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+
+//using to simulate taking a photo on a phone (pick a file from desktop)
+using SimpleFileBrowser;
 
 public class FirebaseManager : MonoBehaviour
 {
@@ -33,7 +38,11 @@ public class FirebaseManager : MonoBehaviour
     [Header("UserData")] 
     [SerializeField] private String _baseUserPhotoUrl = "https://randomuser.me/api/portraits/men/95.jpg";
     public Texture userImageTexture;
-    
+    public List<String> _myFriends;
+
+    [Header("DatabaseTest")]
+    public RawImage rawImage;
+    public TMP_InputField _searchBar;
     
     //initializer
     void Awake()
@@ -69,11 +78,16 @@ public class FirebaseManager : MonoBehaviour
     private void Start()
     {
         StartCoroutine(TryAutoLogin());
+        
+        //This is so I can test from computer
+        FileBrowser.SetFilters(true, new FileBrowser.Filter("Images", ".jpg", ".png"), new FileBrowser.Filter("Text Files", ".txt", ".pdf"));
+        FileBrowser.SetDefaultFilter(".jpg");
+        FileBrowser.SetExcludedExtensions(".lnk", ".tmp", ".zip", ".rar", ".exe");
     }
     private IEnumerator TryAutoLogin()
     {
         //Todo: figure out which wait until to use...
-        yield return new WaitForSeconds(0.8f); //has to wait until firebase async task is finished... (is there something better?)
+        yield return new WaitForSeconds(0.4f); //has to wait until firebase async task is finished... (is there something better?)
         String savedUsername = PlayerPrefs.GetString("Username");
         String savedPassword = PlayerPrefs.GetString("Password");
         if (savedUsername != "null" && savedPassword != "null")
@@ -230,7 +244,7 @@ public class FirebaseManager : MonoBehaviour
                             }
                         }));
                         
-                        //set base user profile photo
+                        //setup base user
                         var user = auth.CurrentUser;
                         if (user != null)
                         {
@@ -262,7 +276,11 @@ public class FirebaseManager : MonoBehaviour
                                 Debug.Log("current user url:" + user.PhotoUrl);
                                 // userProfile.GetProfile();
                             });
-    
+                            
+                            //set friend count to zero
+                            var DBTask = DBref.Child("users").Child(User.UserId).Child("FriendCount").SetValueAsync(0);
+                            yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+                            
                             yield return null;
                         }
                     }
@@ -341,12 +359,11 @@ public class FirebaseManager : MonoBehaviour
             callback(((DownloadHandlerTexture)request.downloadHandler).texture);
         }
     }
-
     public void SignOut()
     {
         StartCoroutine(TrySignOut());
     }
-    public IEnumerator TrySignOut()
+    private IEnumerator TrySignOut()
     {
         PlayerPrefs.SetString("Username", "null");
         PlayerPrefs.SetString("Password", "null");
@@ -355,9 +372,161 @@ public class FirebaseManager : MonoBehaviour
         _screenManager.PullUpOnboardingOptions();
     }
     
-    //NOT USED YET (work in progress)
-    private IEnumerator TryUpdateUsernameAuth(string _username)
+    
+    //Adding Friends
+    
+    public void searchDatabase()
     {
+        FirebaseDatabase.DefaultInstance
+            .GetReference("users").OrderByChild("username").EqualTo(_searchBar)
+            .ValueChanged += HandleValueChanged;
+    }
+    void HandleValueChanged(object sender, ValueChangedEventArgs args) {
+        if (args.DatabaseError != null) {
+            Debug.LogError(args.DatabaseError.Message);
+            return;
+        }
+        // Do something with the data in args.Snapshot
+        Debug.Log(args.Snapshot);
+    }
+    
+    
+    public void AddFriend(String _username)
+    {
+        String _nickName = "null";
+        StartCoroutine(FirebaseManager.instance.TryAddFriend(_username, _nickName, (myReturnValue) => {
+            if (myReturnValue != "Success")
+            {
+                Debug.LogError("failed to update freinds");
+            }
+            else
+            {
+                Debug.Log("updated friends");
+            }
+        }));
+    }
+    private IEnumerator TryAddFriend(string _username, string _nickName, System.Action<String> callback)
+    {
+
+        var DBTask = DBref.Child("users").Child(User.UserId).Child("Friends").Child(_username).SetValueAsync(_nickName);
+        
+         yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+        
+         if (DBTask.IsFaulted)
+         {
+             Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
+         }
+         else
+         {
+             callback("Success");
+         }
+    }
+
+
+    //Upload Photo Tests
+    public void UploadImage()
+    {
+        StartCoroutine(ShowUpLoadDialogCoroutine());
+    }
+    IEnumerator ShowUpLoadDialogCoroutine() 
+    {
+
+        yield return FileBrowser.WaitForLoadDialog(FileBrowser.PickMode.FilesAndFolders, true, null, null, "Load Files and Folders", "Load");
+
+        Debug.Log(FileBrowser.Success);
+
+        if (FileBrowser.Success)
+        {
+            // Print paths of the selected files (FileBrowser.Result) (null, if FileBrowser.Success is false)
+            for (int i = 0; i < FileBrowser.Result.Length; i++)
+                Debug.Log(FileBrowser.Result[i]);
+
+            Debug.Log("File Selected");
+            byte[] bytes = FileBrowserHelpers.ReadBytesFromFile(FileBrowser.Result[0]);
+            //Editing Metadata
+            var newMetadata = new MetadataChange();
+            newMetadata.ContentType = "image/jpeg";
+
+            //Create a reference to where the file needs to be uploaded
+            StorageReference uploadRef = storageRef.Child(User.UserId+"/newFile.jpeg");
+            Debug.Log("File upload started");
+            uploadRef.PutBytesAsync(bytes, newMetadata).ContinueWithOnMainThread((task) => {
+                if (task.IsFaulted || task.IsCanceled)
+                {
+                    Debug.Log(task.Exception.ToString());
+                }
+                else
+                {
+                    Debug.Log("File Uploaded Successfully!");
+                }
+            });
+
+
+        }
+    }
+
+    //download Image Tests
+    public void DownloadImage() {
+        StartCoroutine(FirebaseManager.instance.TryLoadImage("",(myReturnValue) => {
+            if (myReturnValue != null)
+            {
+                rawImage.texture = myReturnValue;
+            }
+        }));
+    }
+    private IEnumerator TryLoadImage(string MediaUrl, System.Action<Texture> callback) {
+        // UnityWebRequest request = UnityWebRequestTexture.GetTexture("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2Frocket.png?alt=media"); //Create a request// https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/7Lk0e2Yd5SXJzBE9BoK6occeS5l2%2FnewFile.jpeg?alt=media&token=bd7d6c80-3e68-4640-8f54-3b7db4bacb79
+        UnityWebRequest request = UnityWebRequestTexture.GetTexture("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/"+ User.UserId +"%2FnewFile.jpeg?alt=media"); //Create a request
+
+        yield return request.SendWebRequest(); //Wait for the request to complete
+        if (request.isNetworkError || request.isHttpError)
+        {
+            Debug.LogWarning(request.error);
+        }
+        else
+        {
+            callback(((DownloadHandlerTexture)request.downloadHandler).texture);
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    //OTHER
+    private IEnumerator TryUpdateUsernameAuth(string _username) {
         //Create a user profile and set the username
         UserProfile profile = new UserProfile { DisplayName = _username }; //Todo: add other user data that shouldn't be changed
     
@@ -375,7 +544,7 @@ public class FirebaseManager : MonoBehaviour
             //Auth username is now updated
         }        
     }
-    private IEnumerator TryLoadImage(string MediaUrl, System.Action<Texture> callback)
+    private IEnumerator TryUploadImage(string MediaUrl, System.Action<Texture> callback) 
     {
         UnityWebRequest request = UnityWebRequestTexture.GetTexture(MediaUrl); //Create a request
         yield return request.SendWebRequest(); //Wait for the request to complete
@@ -388,22 +557,8 @@ public class FirebaseManager : MonoBehaviour
             callback(((DownloadHandlerTexture)request.downloadHandler).texture);
         }
     }
-    private IEnumerator TryUploadImage(string MediaUrl, System.Action<Texture> callback)
-    {
-        
-        UnityWebRequest request = UnityWebRequestTexture.GetTexture(MediaUrl); //Create a request
-        yield return request.SendWebRequest(); //Wait for the request to complete
-        if (request.isNetworkError || request.isHttpError)
-        {
-            Debug.Log(request.error);
-        }
-        else
-        {
-            callback(((DownloadHandlerTexture)request.downloadHandler).texture);
-        }
-    }
-    private IEnumerator LoadUserData()
-    {
+    
+    private IEnumerator LoadUserData() {
         //Get the currently logged in user data
         var DBTask = DBref.Child("users").Child(User.UserId).GetValueAsync();
 
@@ -427,8 +582,8 @@ public class FirebaseManager : MonoBehaviour
             // deathsField.text = snapshot.Child("deaths").Value.ToString();
         }
     }
-    private void DeleteFile(String _location)
-    {
+    private void DeleteFile(String _location) 
+    { 
         storageRef = storageRef.Child(_location);
         storageRef.DeleteAsync().ContinueWithOnMainThread(task => {
             if (task.IsCompleted) {
