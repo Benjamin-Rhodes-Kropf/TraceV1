@@ -73,7 +73,7 @@ public class FirebaseManager : MonoBehaviour
     private IEnumerator TryAutoLogin()
     {
         //Todo: figure out which wait until to use...
-        yield return new WaitForSeconds(0.3f); //has to wait until firebase async task is finished... (is there something better?)
+        yield return new WaitForSeconds(0.8f); //has to wait until firebase async task is finished... (is there something better?)
         String savedUsername = PlayerPrefs.GetString("Username");
         String savedPassword = PlayerPrefs.GetString("Password");
         if (savedUsername != "null" && savedPassword != "null")
@@ -86,14 +86,14 @@ public class FirebaseManager : MonoBehaviour
                 }
                 else
                 {
-                    _screenManager.GetComponent<ScreenManager>().Login();
+                    _screenManager.Login();
                 }
             }));
         }
         else
         {
-            Debug.Log("changing page to login options screen");
-            _screenManager.ChangeScreen("LockScreenHome");
+            Debug.Log("pulling up login options");
+            _screenManager.PullUpOnboardingOptions();
         }
     }
     public IEnumerator TryLogin(string _email, string _password,  System.Action<String> callback)
@@ -341,11 +341,18 @@ public class FirebaseManager : MonoBehaviour
             callback(((DownloadHandlerTexture)request.downloadHandler).texture);
         }
     }
+
     public void SignOut()
+    {
+        StartCoroutine(TrySignOut());
+    }
+    public IEnumerator TrySignOut()
     {
         PlayerPrefs.SetString("Username", "null");
         PlayerPrefs.SetString("Password", "null");
         auth.SignOut();
+        yield return new WaitForSeconds(0.8f);
+        _screenManager.PullUpOnboardingOptions();
     }
     
     //NOT USED YET (work in progress)

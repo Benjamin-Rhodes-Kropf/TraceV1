@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 using UnityEngine.UI;
 
 public class ScreenManager : MonoBehaviour
@@ -20,12 +21,15 @@ public class ScreenManager : MonoBehaviour
     
     // screens to be dislayed
     [SerializeField] private UIScreen[] Screens;
-    [SerializeField] private UIScreen[] PopUpScreen;
+    [SerializeField] private UIScreen[] PopUpScreens;
 
     [SerializeField] private List<UIScreen> history;
     [SerializeField] private UIScreen current;
     [SerializeField] private UIScreen currentPopUp;
-
+    
+    //screen ref for logout
+    [SerializeField] private LoadingUIManager _loadingPageUIManager;
+    
     //setup screens
     void Start()
     {
@@ -35,7 +39,7 @@ public class ScreenManager : MonoBehaviour
             s.ScreenObject.gameObject.SetActive(true);
             s.ScreenObject.transform.SetParent(inactiveParent, false);
         }
-        foreach(var s in PopUpScreen)
+        foreach(var s in PopUpScreens)
         {
             s.ScreenObject.gameObject.SetActive(true);
             s.ScreenObject.transform.SetParent(inactiveParent, false);
@@ -53,14 +57,19 @@ public class ScreenManager : MonoBehaviour
         screen.ScreenObject.SetParent(startParent, false); // set new screen parent for animation
         current = screen;
     }
-    
+
+    public void PullUpOnboardingOptions()
+    {
+        _loadingPageUIManager.PullButtonsUp();
+    }
+
     //menu animation controls
     public void PopupScreen(string PopUpID)
     {
         currentPopUp = PopupFromID(PopUpID);
         currentPopUp.ScreenObject.SetParent(PopUpParent);
         ScreenAnimator.SetTrigger("PopIn"); // trigger animation
-    } 
+    }
     public void ClosePopup()
     {
         ScreenAnimator.SetTrigger("PopOut"); // trigger animation
@@ -109,7 +118,7 @@ public class ScreenManager : MonoBehaviour
     }
     UIScreen PopupFromID(string ScreenID)
     {
-        foreach (UIScreen screen in PopUpScreen)
+        foreach (UIScreen screen in PopUpScreens)
         {
             if (screen.Name == ScreenID) return screen;
         }
@@ -130,7 +139,7 @@ public class ScreenManager : MonoBehaviour
     }
     public void ClearAllPopups()
     {
-        foreach (var p in PopUpScreen)
+        foreach (var p in PopUpScreens)
         {
             p.ScreenObject.SetParent(inactiveParent, false);
         }
