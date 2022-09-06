@@ -59,6 +59,18 @@
 -Cloned old git to new git
 -removed idea file
 
+0.2.1
+-Reformatted Login Screen
+-Reformatted loading screen
+-Added loading anim buttons
+-Added DoTween for Custom Animations
+
+0.2.2
+-added ability to add friends
+-added ability to upload photos
+-added ability to pull images based on user
+
+
 TO DO:
 -add loading transition
 -make better looking validation (highlight box ahd give message)
