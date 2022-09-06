@@ -57,7 +57,7 @@
 
 0.2.0
 -Cloned old git to new git
-
+-removed idea file
 
 TO DO:
 -add loading transition

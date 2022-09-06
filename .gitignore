@@ -10,12 +10,16 @@
 [Ll]ogs/
 [Mm]emoryCaptures/
 
+
 #Firebase
 Editor Default Resources/
 ExternalDependencyManager/
 Firebase/
 Parse/
 Plugins/
+
+#Idea
+.idea/
 
 # Asset meta data should only be ignored when the corresponding asset is also ignored
 !/[Aa]ssets/**/*.meta
