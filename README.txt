@@ -71,9 +71,13 @@
 -added ability to pull images based on user
 
 0.2.3
+-added DB Tester Screen and UI manager
+-added player prefs plugin
 
 TO DO:
 -add loading transition
+-add phone number verification
+-add import contacts
 -make better looking validation (highlight box ahd give message)
 -fix text box font and type
 -fix firebase loading error

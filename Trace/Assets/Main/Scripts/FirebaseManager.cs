@@ -373,7 +373,7 @@ public class FirebaseManager : MonoBehaviour
     }
     
     
-    //Adding Friends
+    
     
     public void searchDatabase()
     {
