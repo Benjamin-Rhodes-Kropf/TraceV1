@@ -352,7 +352,7 @@ public class FirebaseManager : MonoBehaviour
         yield return request.SendWebRequest(); //Wait for the request to complete
         if (request.isNetworkError || request.isHttpError)
         {
-            Debug.LogWarning(request.error);
+            Debug.Log("error:" + request.error);
         }
         else
         {
