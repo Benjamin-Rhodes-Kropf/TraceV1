@@ -70,6 +70,7 @@
 -added ability to upload photos
 -added ability to pull images based on user
 
+0.2.3
 
 TO DO:
 -add loading transition
