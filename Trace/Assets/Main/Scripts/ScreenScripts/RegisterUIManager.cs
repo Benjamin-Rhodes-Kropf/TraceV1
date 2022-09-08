@@ -10,6 +10,7 @@ public class RegisterUIManager : MonoBehaviour
     [Header("Register")]
     [SerializeField] private TMP_InputField usernameRegisterField;
     [SerializeField] private TMP_InputField emailRegisterField;
+    [SerializeField] private TMP_InputField phoneNumber; //need to do proper validation
     [SerializeField] private TMP_InputField passwordRegisterField;
     [SerializeField] private TMP_InputField passwordRegisterVerifyField;
     [SerializeField] private TMP_Text warningRegisterText;
