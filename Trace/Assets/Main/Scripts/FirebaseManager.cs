@@ -38,7 +38,6 @@ public class FirebaseManager : MonoBehaviour
     [Header("UserData")] 
     [SerializeField] private String _baseUserPhotoUrl = "https://randomuser.me/api/portraits/men/95.jpg";
     public Texture userImageTexture;
-    public List<String> _myFriends;
 
     [Header("DatabaseTest")]
     public RawImage rawImage;
@@ -214,7 +213,7 @@ public class FirebaseManager : MonoBehaviour
                 if (User != null)
                 {
                     //Create a user profile and set the username
-                    UserProfile profile = new UserProfile{DisplayName = _username};
+                    UserProfile profile = new UserProfile{DisplayName = _username, PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")};
                     
                     //Call the Firebase auth update user profile function passing the profile with the username
                     var ProfileTask = User.UpdateUserProfileAsync(profile);
@@ -251,7 +250,6 @@ public class FirebaseManager : MonoBehaviour
                             Firebase.Auth.UserProfile userProfile = new Firebase.Auth.UserProfile
                             {
                                 DisplayName = user.DisplayName,
-                                PhotoUrl = new System.Uri("https://www.htgtrading.co.uk/wp-content/uploads/2016/03/no-user-image-square.jpg")
                             };
                             user.UpdateUserProfileAsync(userProfile).ContinueWith(task =>
                             {
@@ -315,7 +313,7 @@ public class FirebaseManager : MonoBehaviour
             Firebase.Auth.UserProfile profile = new Firebase.Auth.UserProfile
             {
                 DisplayName = user.DisplayName,
-                PhotoUrl = new System.Uri(_baseUserPhotoUrl)
+                PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")
             };
             user.UpdateUserProfileAsync(profile).ContinueWith(task =>
             {
@@ -348,7 +346,18 @@ public class FirebaseManager : MonoBehaviour
     }
     private IEnumerator TryLoadUserProfileImage(System.Action<Texture> callback)
     {
-        UnityWebRequest request = UnityWebRequestTexture.GetTexture(User.PhotoUrl); //Create a request
+        var request = new UnityWebRequest();
+        try
+        {
+            request = UnityWebRequestTexture.GetTexture(User.PhotoUrl); //Create a request
+        }
+        catch (Exception e)
+        {
+            Debug.Log("failed to get user profile using emty photo");
+            request = UnityWebRequestTexture.GetTexture("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063"); //Create a request
+
+        }    
+        
         yield return request.SendWebRequest(); //Wait for the request to complete
         if (request.isNetworkError || request.isHttpError)
         {

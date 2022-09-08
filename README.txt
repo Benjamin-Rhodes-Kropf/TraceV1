@@ -73,6 +73,8 @@
 0.2.3
 -added DB Tester Screen and UI manager
 -added player prefs plugin
+-changed register screen look
+-added phone number to register screen
 
 TO DO:
 -add loading transition
