@@ -25,6 +25,22 @@ public class RegisterUIManager : MonoBehaviour
         passwordRegisterVerifyField.text = "";
     }
     
+    public static string PhoneNumber(string value)
+    { 
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        value = new System.Text.RegularExpressions.Regex(@"\D")
+            .Replace(value, string.Empty);
+        value = value.TrimStart('1');
+        if (value.Length == 7)
+            return Convert.ToInt64(value).ToString("###-####");
+        if (value.Length == 10)
+            return Convert.ToInt64(value).ToString("###-###-####");
+        if (value.Length > 10)
+            return Convert.ToInt64(value)
+                .ToString("###-###-#### " + new String('#', (value.Length - 10)));
+        return value;
+    }
+    
     //Function for the register button
     public void RegisterButton()
     {
@@ -34,9 +50,11 @@ public class RegisterUIManager : MonoBehaviour
             warningRegisterText.text = "Passwords do not match!";
             return;
         }
+
+        var _userPhoneNumber = PhoneNumber(phoneNumber.text);
         
         //Call the register coroutine passing the email, password, and username
-        StartCoroutine(FirebaseManager.instance.TryRegister(emailRegisterField.text, passwordRegisterField.text, usernameRegisterField.text,  (myReturnValue) => {
+        StartCoroutine(FirebaseManager.instance.RegisterNewUser(emailRegisterField.text, passwordRegisterField.text, usernameRegisterField.text,_userPhoneNumber,  (myReturnValue) => {
             if (myReturnValue != null)
             {
                 confirmRegisterText.text = "";

@@ -51,10 +51,25 @@ public class ProfileImageUIManager : MonoBehaviour
             _profileImage.sprite = profileImageOne;
         }
     }
-    public void ChangeProfileName()
+    public void SetProfileNickName()
+    {
+        StartCoroutine(FirebaseManager.instance.SetUserNickName(profileName.text, (myReturnValue) =>
+        {
+            if (myReturnValue != null)
+            {
+                Debug.Log(myReturnValue);
+            }
+            else
+            {
+                Debug.Log("db changed user nickName");
+            }
+        }));
+    }
+    
+    public void ChangeProfileImage()
     {
         String name = profileName.text;
-        StartCoroutine(FirebaseManager.instance.TryUpdateUserNickName(name, (myReturnValue) =>
+        StartCoroutine(FirebaseManager.instance.SetUserProfilePhoto(imageToUpload, (myReturnValue) =>
         {
             if (myReturnValue != null)
             {
@@ -66,19 +81,9 @@ public class ProfileImageUIManager : MonoBehaviour
             }
         }));
     }
-    public void ChangeProfileImage()
+    
+    public void Login()
     {
-        String name = profileName.text;
-        StartCoroutine(FirebaseManager.instance.TryUpdateProfilePhoto(imageToUpload, (myReturnValue) =>
-        {
-            if (myReturnValue != null)
-            {
-                Debug.Log(myReturnValue);
-            }
-            else
-            {
-
-            }
-        }));
+        StartCoroutine(FirebaseManager.instance.AutoLogin());
     }
 }

@@ -75,9 +75,20 @@
 -added player prefs plugin
 -changed register screen look
 -added phone number to register screen
+-changed profile pic card look
+
+0.2.4
+-added mapboxSDK
+-added Geopins and Geopin animation
+-added phone number to register
+-added database update to all values in register
+-added loading transition
+-added friends list into database
+
+
 
 TO DO:
--add loading transition
+-make playerprefs contain everything so user dosnt need to check db every time they do somthing
 -add phone number verification
 -add import contacts
 -make better looking validation (highlight box ahd give message)
@@ -85,12 +96,8 @@ TO DO:
 -fix firebase loading error
 -fully build out color manager
 -change dependancies json so that the project works on download without manual import
--integrate mapbox SDK
 -mapbox water shader
--add mapbox pins
 -add mapbox pin shader
--add mapbox loader
--Loading anim
 -Make image profile picker able to acces camera roll cross compatible
 -Make Profile Photo upload and display
 -working image and video upload assosiated with user
