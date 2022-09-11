@@ -24,7 +24,7 @@ public class LoginUIManager : MonoBehaviour
     {
         String test = "hello world";
         //Call the login coroutine passing the email and password with return values
-        StartCoroutine(FirebaseManager.instance.TryLogin(emailLoginField.text, passwordLoginField.text, (myReturnValue) => {
+        StartCoroutine(FirebaseManager.instance.Login(emailLoginField.text, passwordLoginField.text, (myReturnValue) => {
             if (myReturnValue != null)
             {
                 confirmLoginText.text = "";
@@ -41,7 +41,7 @@ public class LoginUIManager : MonoBehaviour
     
     public void SignOutButton()
     {
-        FirebaseManager.instance.SignOut();
+        FirebaseManager.instance.LogOutOfAccount();
         // UIManager.instance.LoginScreen();
         ClearLoginFeilds();
     }

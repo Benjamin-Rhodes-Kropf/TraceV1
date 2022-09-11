@@ -76,14 +76,19 @@ public class FirebaseManager : MonoBehaviour
     }
     private void Start()
     {
-        StartCoroutine(TryAutoLogin());
+        StartCoroutine(AutoLogin());
         
         //This is so I can test from computer
         FileBrowser.SetFilters(true, new FileBrowser.Filter("Images", ".jpg", ".png"), new FileBrowser.Filter("Text Files", ".txt", ".pdf"));
         FileBrowser.SetDefaultFilter(".jpg");
         FileBrowser.SetExcludedExtensions(".lnk", ".tmp", ".zip", ".rar", ".exe");
     }
-    private IEnumerator TryAutoLogin()
+    public void LogOutOfAccount()
+    {
+        StartCoroutine(LogOut());
+    }
+    
+    public IEnumerator AutoLogin()
     {
         //Todo: figure out which wait until to use...
         yield return new WaitForSeconds(0.4f); //has to wait until firebase async task is finished... (is there something better?)
@@ -92,10 +97,11 @@ public class FirebaseManager : MonoBehaviour
         if (savedUsername != "null" && savedPassword != "null")
         {
             Debug.Log("auto logging in");
-            StartCoroutine(FirebaseManager.instance.TryLogin(savedUsername, savedPassword, (myReturnValue) => {
+            StartCoroutine(FirebaseManager.instance.Login(savedUsername, savedPassword, (myReturnValue) => {
                 if (myReturnValue != null)
                 {
                     Debug.LogError("failed to autoLogin");
+                    StartCoroutine(LogOut());
                 }
                 else
                 {
@@ -109,7 +115,7 @@ public class FirebaseManager : MonoBehaviour
             _screenManager.PullUpOnboardingOptions();
         }
     }
-    public IEnumerator TryLogin(string _email, string _password,  System.Action<String> callback)
+    public IEnumerator Login(string _email, string _password,  System.Action<String> callback)
     {
         //Call the Firebase auth signin function passing the email and password
         var LoginTask = auth.SignInWithEmailAndPasswordAsync(_email, _password);
@@ -149,12 +155,21 @@ public class FirebaseManager : MonoBehaviour
             Debug.Log("logged In: user profile photo is: " + User.PhotoUrl);
             
             //Load User Profile Texture
-            StartCoroutine(FirebaseManager.instance.TryLoadUserProfileImage((myReturnValue) => {
+            StartCoroutine(FirebaseManager.instance.GetUserProfileImage((myReturnValue) => {
                 if (myReturnValue != null)
                 {
                     userImageTexture = myReturnValue;
                 }
             }));
+            
+            
+            
+            //all database things that need to be activated
+            var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(true);
+            yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
+            
+            
+            
             
             //stay logged in
             PlayerPrefs.SetString("Username", _email);
@@ -165,11 +180,21 @@ public class FirebaseManager : MonoBehaviour
             callback(null);
         }
     }
-    public IEnumerator TryRegister(string _email, string _password, string _username,  System.Action<String> callback)
+    private IEnumerator LogOut()
+    {
+        PlayerPrefs.SetString("Username", "null");
+        PlayerPrefs.SetString("Password", "null");
+        auth.SignOut();
+        yield return new WaitForSeconds(0.8f);
+        _screenManager.PullUpOnboardingOptions();
+    }
+    
+    //register events
+    public IEnumerator RegisterNewUser(string _email, string _password, string _username, string _phoneNumber,  System.Action<String> callback)
     {
         if (_username == "")
         {
-            callback("Missing Username");
+            callback("Missing Username"); //having a blank nickname is not really a DB error so I return a error here
         }
         else 
         {
@@ -194,9 +219,9 @@ public class FirebaseManager : MonoBehaviour
                     case AuthError.MissingPassword:
                         message = "Missing Password";
                         break;
-                    // case AuthError.WeakPassword:
-                    //     message = "Weak Password";
-                    //     break;
+                    case AuthError.WeakPassword:
+                        message = "Weak Password";
+                        break;
                     case AuthError.EmailAlreadyInUse:
                         message = "Email Already In Use";
                         break;
@@ -207,43 +232,24 @@ public class FirebaseManager : MonoBehaviour
             else
             {
                 //User has now been created
-                //Now get the result
                 User = RegisterTask.Result;
-
+                
                 if (User != null)
                 {
-                    //Create a user profile and set the username
+                    //Create a user profile and set the username todo: set user profile image dynamically
                     UserProfile profile = new UserProfile{DisplayName = _username, PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")};
                     
-                    //Call the Firebase auth update user profile function passing the profile with the username
                     var ProfileTask = User.UpdateUserProfileAsync(profile);
-                    //Wait until the task completes
                     yield return new WaitUntil(predicate: () => ProfileTask.IsCompleted);
 
                     if (ProfileTask.Exception != null)
                     {
-                        //If there are errors handle them
                         Debug.LogWarning(message: $"Failed to register task with {ProfileTask.Exception}");
-                        // warningRegisterText.text = "Username Set Failed!";
                         Debug.LogWarning("Username Set Failed!");
-                        
                         callback("Something Went Wrong, Sorry");
                     }
-                    else
+                    else 
                     {
-                        //log user in
-                        StartCoroutine(TryLogin(_email, _password, (myReturnValue) => {
-                            if (myReturnValue != null)
-                            {
-                                Debug.LogWarning("failed to login");
-                            }
-                            else
-                            {
-                                Debug.Log("Logged In!");
-                            }
-                        }));
-                        
-                        //setup base user
                         var user = auth.CurrentUser;
                         if (user != null)
                         {
@@ -262,22 +268,53 @@ public class FirebaseManager : MonoBehaviour
                                 if (task.IsFaulted)
                                 {
                                     Debug.LogError("UpdateUserProfileAsync encountered an error: " + task.Exception);
-                                    return;
                                 }
-    
-                                User = auth.CurrentUser;
-                                Debug.Log(user.DisplayName);
-                                Debug.Log(user.PhotoUrl);
-    
-                                Debug.Log("User profile updated successfully.");
-    
-                                Debug.Log("current user url:" + user.PhotoUrl);
-                                // userProfile.GetProfile();
                             });
                             
-                            //set friend count to zero
-                            var DBTask = DBref.Child("users").Child(User.UserId).Child("FriendCount").SetValueAsync(0);
-                            yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+                            //Todo: All of these could be put into one request? less cost?
+                            
+                            //setup other things associated with user that are not in firebase auth
+                            var DBTaskSetUsername = DBref.Child("users").Child(User.UserId).Child("Username").SetValueAsync(_username);
+                            yield return new WaitUntil(predicate: () => DBTaskSetUsername.IsCompleted);
+                            
+                            var DBTaskSetUsernameLinkToId = DBref.Child("usernames").Child(_username).SetValueAsync(User.UserId);
+                            yield return new WaitUntil(predicate: () => DBTaskSetUsernameLinkToId.IsCompleted);
+
+                            var DBTaskSetPhoneNumber = DBref.Child("users").Child(User.UserId).Child("PhoneNumber").SetValueAsync(_phoneNumber);
+                            yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumber.IsCompleted);
+                            
+                            var DBTaskSetPhoneNumberLinkToId = DBref.Child("phoneNumbers").Child(User.UserId).Child(_phoneNumber).SetValueAsync(User.UserId);
+                            yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumberLinkToId.IsCompleted);
+                            
+                            var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(false);
+                            yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
+                            
+                            var DBTaskSetLocation = DBref.Child("users").Child(User.UserId).Child("Location").SetValueAsync(null); // todo: get user location (later move to be under my friends)
+                            yield return new WaitUntil(predicate: () => DBTaskSetLocation.IsCompleted);
+                            
+                            var DBTaskSetFreindCount = DBref.Child("users").Child(User.UserId).Child("FriendCount").SetValueAsync(0);
+                            yield return new WaitUntil(predicate: () => DBTaskSetFreindCount.IsCompleted);
+                            
+                            var DBTaskSetUserFriends = DBref.Child("friends").Child(User.UserId).Child("null").SetValueAsync("null");
+                            yield return new WaitUntil(predicate: () => DBTaskSetUserFriends.IsCompleted);
+                            
+                            var DBTaskSetTraceScore = DBref.Child("users").Child(User.UserId).Child("TraceScore").SetValueAsync(0);
+                            yield return new WaitUntil(predicate: () => DBTaskSetTraceScore.IsCompleted);
+                            
+                            
+                            
+                            //if nothing has gone wrong try logging in with new users information
+                            
+                            StartCoroutine(Login(_email, _password, (myReturnValue) => {
+                                if (myReturnValue != null)
+                                {
+                                    Debug.LogWarning("failed to login");
+                                }
+                                else
+                                {
+                                    Debug.Log("Logged In!");
+                                }
+                            }));
                             
                             yield return null;
                         }
@@ -287,10 +324,72 @@ public class FirebaseManager : MonoBehaviour
             }
         }
     }
-    public IEnumerator TryUpdateUserNickName(string _nickName, System.Action<String> callback)
+    
+    //set 
+    public IEnumerator SetUsername(string _username, System.Action<String> callback)
     {
+        Debug.Log("Db SetUsername to :" + _username);
         //Set the currently logged in user nickName in the database
-        var DBTask = DBref.Child("users").Child(User.UserId).Child("nickName").SetValueAsync(_nickName);
+        var DBTask = DBref.Child("users").Child(User.UserId).Child("Username").SetValueAsync(_username);
+        
+        yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+
+        if (DBTask.Exception != null)
+        {
+            Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
+        }
+        else
+        {
+            callback("successfully updated _username");
+        }
+    }
+    public IEnumerator SetUserProfilePhoto(Image _image, System.Action<String> callback)
+        {
+            String _profilePhotoUrl = "profileUrl";
+            var user = auth.CurrentUser;
+        
+            if (user != null)
+            {
+                Firebase.Auth.UserProfile profile = new Firebase.Auth.UserProfile
+                {
+                    DisplayName = user.DisplayName,
+                    PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")
+                };
+                user.UpdateUserProfileAsync(profile).ContinueWith(task =>
+                {
+                    if (task.IsCanceled)
+                    {
+                        Debug.LogError("UpdateUserProfileAsync was canceled.");
+                        return;
+                    }
+        
+                    if (task.IsFaulted)
+                    {
+                        Debug.LogError("UpdateUserProfileAsync encountered an error: " + task.Exception);
+                        return;
+                    }
+        
+                    User = auth.CurrentUser;
+                    Debug.Log(user.DisplayName);
+                    Debug.Log(user.PhotoUrl);
+        
+                    Debug.Log("User profile updated successfully.");
+        
+                    Debug.Log("current user url:" + user.PhotoUrl);
+                    _profilePhotoUrl = user.PhotoUrl.ToString();
+                    // userProfile.GetProfile();
+                });
+        
+                yield return null;
+                callback(_profilePhotoUrl);
+            }
+        }
+    
+    public IEnumerator SetUserNickName(string _nickName, System.Action<String> callback)
+    {
+        Debug.Log("Db update nick to :" + _nickName);
+        //Set the currently logged in user nickName in the database
+        var DBTask = DBref.Child("users").Child(User.UserId).Child("NickName").SetValueAsync(_nickName);
         
         yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
 
@@ -303,48 +402,24 @@ public class FirebaseManager : MonoBehaviour
             callback("successfully updated nickName");
         }
     }
-    public IEnumerator TryUpdateProfilePhoto(Image _image, System.Action<String> callback)
+    public IEnumerator SetUserPhoneNumber(string _phoneNumber, System.Action<String> callback)
     {
-        String _profilePhotoUrl = "profileUrl";
-        var user = auth.CurrentUser;
-    
-        if (user != null)
+        var DBTask = DBref.Child("users").Child(User.UserId).Child("phoneNumber").SetValueAsync(_phoneNumber);
+        
+        yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+
+        if (DBTask.Exception != null)
         {
-            Firebase.Auth.UserProfile profile = new Firebase.Auth.UserProfile
-            {
-                DisplayName = user.DisplayName,
-                PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")
-            };
-            user.UpdateUserProfileAsync(profile).ContinueWith(task =>
-            {
-                if (task.IsCanceled)
-                {
-                    Debug.LogError("UpdateUserProfileAsync was canceled.");
-                    return;
-                }
-    
-                if (task.IsFaulted)
-                {
-                    Debug.LogError("UpdateUserProfileAsync encountered an error: " + task.Exception);
-                    return;
-                }
-    
-                User = auth.CurrentUser;
-                Debug.Log(user.DisplayName);
-                Debug.Log(user.PhotoUrl);
-    
-                Debug.Log("User profile updated successfully.");
-    
-                Debug.Log("current user url:" + user.PhotoUrl);
-                _profilePhotoUrl = user.PhotoUrl.ToString();
-                // userProfile.GetProfile();
-            });
-    
-            yield return null;
-            callback(_profilePhotoUrl);
+            Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
+        }
+        else
+        {
+            callback("success");
         }
     }
-    private IEnumerator TryLoadUserProfileImage(System.Action<Texture> callback)
+    
+    //get
+    private IEnumerator GetUserProfileImage(System.Action<Texture> callback)
     {
         var request = new UnityWebRequest();
         try
@@ -368,20 +443,36 @@ public class FirebaseManager : MonoBehaviour
             callback(((DownloadHandlerTexture)request.downloadHandler).texture);
         }
     }
-    public void SignOut()
+    private IEnumerator GetUserNickName(System.Action<String> callback)
     {
-        StartCoroutine(TrySignOut());
+        var DBTask = DBref.Child("users").Child(User.UserId).Child("Friends").Child("nickName").GetValueAsync();
+        
+        yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+        
+        if (DBTask.IsFaulted)
+        {
+            Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
+        }
+        else
+        {
+            callback(DBTask.Result.ToString());
+        }
     }
-    private IEnumerator TrySignOut()
+    private IEnumerator GetUserPhoneNumber(System.Action<String> callback)
     {
-        PlayerPrefs.SetString("Username", "null");
-        PlayerPrefs.SetString("Password", "null");
-        auth.SignOut();
-        yield return new WaitForSeconds(0.8f);
-        _screenManager.PullUpOnboardingOptions();
+        var DBTask = DBref.Child("users").Child(User.UserId).Child("Friends").Child("nickName").GetValueAsync();
+        
+        yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+        
+        if (DBTask.IsFaulted)
+        {
+            Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
+        }
+        else
+        {
+            callback(DBTask.Result.ToString());
+        }
     }
-    
-    
     
     
     public void searchDatabase()
