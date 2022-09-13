@@ -16339,12 +16339,12 @@ MonoBehaviour:
   _initializeOnStart: 1
   _imagery:
     _layerProperty:
-      sourceType: 6
+      sourceType: 2
       sourceOptions:
         isActive: 1
         layerSource:
           Name: Streets
-          Id: mapbox://styles/benrk100/cl7wrdmxo000315mv3ww3jyv1
+          Id: mapbox://styles/mapbox/dark-v9
           Modified: 
           UserName: 
       rasterOptions:
