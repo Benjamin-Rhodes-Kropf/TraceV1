@@ -75,7 +75,7 @@ namespace Mapbox.Unity.Telemetry
 			byte[] bodyRaw = Encoding.UTF8.GetBytes(bodyJsonString);
 
 #if UNITY_2017_1_OR_NEWER
-			UnityWebRequest postRequest = new UnityWebRequest(url, "POST");
+			using (UnityWebRequest postRequest = new UnityWebRequest(url, "POST")){
 			postRequest.SetRequestHeader("Content-Type", "application/json");
 
 			postRequest.downloadHandler = new DownloadHandlerBuffer();
@@ -105,6 +105,7 @@ namespace Mapbox.Unity.Telemetry
 			else
 			{
 				PlayerPrefs.SetString(Constants.Path.TELEMETRY_TURNSTILE_LAST_TICKS_EDITOR_KEY, DateTime.Now.Ticks.ToString());
+			}
 			}
 		}
 
