@@ -119,6 +119,7 @@ public class FirebaseManager : MonoBehaviour
     {
         //Call the Firebase auth signin function passing the email and password
         var LoginTask = auth.SignInWithEmailAndPasswordAsync(_email, _password);
+        
         yield return new WaitUntil(predicate: () => LoginTask.IsCompleted);
 
         if (LoginTask.Exception != null)
@@ -147,39 +148,33 @@ public class FirebaseManager : MonoBehaviour
                     break;
             }
             callback(message); //return errors
+            yield break;
         }
-        else
-        {
-            User = LoginTask.Result;
-            Debug.LogFormat("User signed in successfully: {0} ({1})", User.DisplayName, User.Email);
-            Debug.Log("logged In: user profile photo is: " + User.PhotoUrl);
-            
-            //Load User Profile Texture
-            StartCoroutine(FirebaseManager.instance.GetUserProfileImage((myReturnValue) => {
-                if (myReturnValue != null)
-                {
-                    userImageTexture = myReturnValue;
-                }
-            }));
-            
-            
-            
-            //all database things that need to be activated
-            var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(true);
-            yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
-            
-            
-            
-            
-            //stay logged in
-            PlayerPrefs.SetString("Username", _email);
-            PlayerPrefs.SetString("Password", _password);
-            PlayerPrefs.Save();
-            
-            yield return null;
-            callback(null);
-        }
+
+        User = LoginTask.Result;
+        Debug.LogFormat("User signed in successfully: {0} ({1})", User.DisplayName, User.Email);
+        Debug.Log("logged In: user profile photo is: " + User.PhotoUrl);
+        
+        //Load User Profile Texture
+        StartCoroutine(FirebaseManager.instance.GetUserProfileImage((myReturnValue) => {
+            if (myReturnValue != null)
+            {
+                userImageTexture = myReturnValue;
+            }
+        }));
+        
+        //all database things that need to be activated
+        var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(true);
+        yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
+        
+        //stay logged in
+        PlayerPrefs.SetString("Username", _email);
+        PlayerPrefs.SetString("Password", _password);
+        PlayerPrefs.Save();
+        
+        callback(null);
     }
+    
     private IEnumerator LogOut()
     {
         PlayerPrefs.SetString("Username", "null");
@@ -195,134 +190,134 @@ public class FirebaseManager : MonoBehaviour
         if (_username == "")
         {
             callback("Missing Username"); //having a blank nickname is not really a DB error so I return a error here
+            yield break;
         }
-        else 
+
+        //Call the Firebase auth signin function passing the email and password
+        var RegisterTask = auth.CreateUserWithEmailAndPasswordAsync(_email, _password);
+        //Wait until the task completes
+        yield return new WaitUntil(predicate: () => RegisterTask.IsCompleted);
+
+        if (RegisterTask.Exception != null)
         {
-            //Call the Firebase auth signin function passing the email and password
-            var RegisterTask = auth.CreateUserWithEmailAndPasswordAsync(_email, _password);
-            //Wait until the task completes
-            yield return new WaitUntil(predicate: () => RegisterTask.IsCompleted);
+            //If there are errors handle them
+            Debug.LogWarning(message: $"Failed to register task with {RegisterTask.Exception}");
+            FirebaseException firebaseEx = RegisterTask.Exception.GetBaseException() as FirebaseException;
+            AuthError errorCode = (AuthError)firebaseEx.ErrorCode;
 
-            if (RegisterTask.Exception != null)
+            string message = "Register Failed!";
+            switch (errorCode)
             {
-                //If there are errors handle them
-                Debug.LogWarning(message: $"Failed to register task with {RegisterTask.Exception}");
-                FirebaseException firebaseEx = RegisterTask.Exception.GetBaseException() as FirebaseException;
-                AuthError errorCode = (AuthError)firebaseEx.ErrorCode;
+                case AuthError.MissingEmail:
+                    message = "Missing Email";
+                    break;
+                case AuthError.MissingPassword:
+                    message = "Missing Password";
+                    break;
+                case AuthError.WeakPassword:
+                    message = "Weak Password";
+                    break;
+                case AuthError.EmailAlreadyInUse:
+                    message = "Email Already In Use";
+                    break;
+            }
+            Debug.LogWarning(message);
+            callback(message);
+            yield break;
+        }
 
-                string message = "Register Failed!";
-                switch (errorCode)
-                {
-                    case AuthError.MissingEmail:
-                        message = "Missing Email";
-                        break;
-                    case AuthError.MissingPassword:
-                        message = "Missing Password";
-                        break;
-                    case AuthError.WeakPassword:
-                        message = "Weak Password";
-                        break;
-                    case AuthError.EmailAlreadyInUse:
-                        message = "Email Already In Use";
-                        break;
-                }
-                Debug.LogWarning(message);
-                callback(message);
+        //User has now been created
+        User = RegisterTask.Result;
+
+        if (User == null)
+        {
+            Debug.LogWarning("User Null");
+            yield break;
+        }
+
+        //Create a user profile and set the username todo: set user profile image dynamically
+        UserProfile profile = new UserProfile{DisplayName = _username, PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")};
+        
+        var ProfileTask = User.UpdateUserProfileAsync(profile);
+        yield return new WaitUntil(predicate: () => ProfileTask.IsCompleted);
+
+        if (ProfileTask.Exception != null)
+        {
+            Debug.LogWarning(message: $"Failed to register task with {ProfileTask.Exception}");
+            Debug.LogWarning("Username Set Failed!");
+            callback("Something Went Wrong, Sorry");
+            yield break;
+        }
+
+        var user = auth.CurrentUser;
+        if (user == null)
+        {
+            Debug.LogWarning("User Null");
+            yield break;
+        }
+
+        Firebase.Auth.UserProfile userProfile = new Firebase.Auth.UserProfile
+        {
+            DisplayName = user.DisplayName,
+        };
+        user.UpdateUserProfileAsync(userProfile).ContinueWith(task =>
+        {
+            if (task.IsCanceled)
+            {
+                Debug.LogError("UpdateUserProfileAsync was canceled.");
+                return;
+            }
+
+            if (task.IsFaulted)
+            {
+                Debug.LogError("UpdateUserProfileAsync encountered an error: " + task.Exception);
+            }
+        });
+        
+        //Todo: All of these could be put into one request? less cost?
+        
+        //setup other things associated with user that are not in firebase auth
+        var DBTaskSetUsername = DBref.Child("users").Child(User.UserId).Child("Username").SetValueAsync(_username);
+        yield return new WaitUntil(predicate: () => DBTaskSetUsername.IsCompleted);
+        
+        var DBTaskSetUsernameLinkToId = DBref.Child("usernames").Child(_username).SetValueAsync(User.UserId);
+        yield return new WaitUntil(predicate: () => DBTaskSetUsernameLinkToId.IsCompleted);
+
+        var DBTaskSetPhoneNumber = DBref.Child("users").Child(User.UserId).Child("PhoneNumber").SetValueAsync(_phoneNumber);
+        yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumber.IsCompleted);
+        
+        var DBTaskSetPhoneNumberLinkToId = DBref.Child("phoneNumbers").Child(User.UserId).Child(_phoneNumber).SetValueAsync(User.UserId);
+        yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumberLinkToId.IsCompleted);
+        
+        var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(false);
+        yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
+        
+        var DBTaskSetLocation = DBref.Child("users").Child(User.UserId).Child("Location").SetValueAsync(null); // todo: get user location (later move to be under my friends)
+        yield return new WaitUntil(predicate: () => DBTaskSetLocation.IsCompleted);
+        
+        var DBTaskSetFreindCount = DBref.Child("users").Child(User.UserId).Child("FriendCount").SetValueAsync(0);
+        yield return new WaitUntil(predicate: () => DBTaskSetFreindCount.IsCompleted);
+        
+        var DBTaskSetUserFriends = DBref.Child("friends").Child(User.UserId).Child("null").SetValueAsync("null");
+        yield return new WaitUntil(predicate: () => DBTaskSetUserFriends.IsCompleted);
+        
+        var DBTaskSetTraceScore = DBref.Child("users").Child(User.UserId).Child("TraceScore").SetValueAsync(0);
+        yield return new WaitUntil(predicate: () => DBTaskSetTraceScore.IsCompleted);
+        
+        
+        //if nothing has gone wrong try logging in with new users information
+        StartCoroutine(Login(_email, _password, (myReturnValue) => {
+            if (myReturnValue != null)
+            {
+                Debug.LogWarning("failed to login");
             }
             else
             {
-                //User has now been created
-                User = RegisterTask.Result;
-                
-                if (User != null)
-                {
-                    //Create a user profile and set the username todo: set user profile image dynamically
-                    UserProfile profile = new UserProfile{DisplayName = _username, PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")};
-                    
-                    var ProfileTask = User.UpdateUserProfileAsync(profile);
-                    yield return new WaitUntil(predicate: () => ProfileTask.IsCompleted);
-
-                    if (ProfileTask.Exception != null)
-                    {
-                        Debug.LogWarning(message: $"Failed to register task with {ProfileTask.Exception}");
-                        Debug.LogWarning("Username Set Failed!");
-                        callback("Something Went Wrong, Sorry");
-                    }
-                    else 
-                    {
-                        var user = auth.CurrentUser;
-                        if (user != null)
-                        {
-                            Firebase.Auth.UserProfile userProfile = new Firebase.Auth.UserProfile
-                            {
-                                DisplayName = user.DisplayName,
-                            };
-                            user.UpdateUserProfileAsync(userProfile).ContinueWith(task =>
-                            {
-                                if (task.IsCanceled)
-                                {
-                                    Debug.LogError("UpdateUserProfileAsync was canceled.");
-                                    return;
-                                }
-    
-                                if (task.IsFaulted)
-                                {
-                                    Debug.LogError("UpdateUserProfileAsync encountered an error: " + task.Exception);
-                                }
-                            });
-                            
-                            //Todo: All of these could be put into one request? less cost?
-                            
-                            //setup other things associated with user that are not in firebase auth
-                            var DBTaskSetUsername = DBref.Child("users").Child(User.UserId).Child("Username").SetValueAsync(_username);
-                            yield return new WaitUntil(predicate: () => DBTaskSetUsername.IsCompleted);
-                            
-                            var DBTaskSetUsernameLinkToId = DBref.Child("usernames").Child(_username).SetValueAsync(User.UserId);
-                            yield return new WaitUntil(predicate: () => DBTaskSetUsernameLinkToId.IsCompleted);
-
-                            var DBTaskSetPhoneNumber = DBref.Child("users").Child(User.UserId).Child("PhoneNumber").SetValueAsync(_phoneNumber);
-                            yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumber.IsCompleted);
-                            
-                            var DBTaskSetPhoneNumberLinkToId = DBref.Child("phoneNumbers").Child(User.UserId).Child(_phoneNumber).SetValueAsync(User.UserId);
-                            yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumberLinkToId.IsCompleted);
-                            
-                            var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(false);
-                            yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
-                            
-                            var DBTaskSetLocation = DBref.Child("users").Child(User.UserId).Child("Location").SetValueAsync(null); // todo: get user location (later move to be under my friends)
-                            yield return new WaitUntil(predicate: () => DBTaskSetLocation.IsCompleted);
-                            
-                            var DBTaskSetFreindCount = DBref.Child("users").Child(User.UserId).Child("FriendCount").SetValueAsync(0);
-                            yield return new WaitUntil(predicate: () => DBTaskSetFreindCount.IsCompleted);
-                            
-                            var DBTaskSetUserFriends = DBref.Child("friends").Child(User.UserId).Child("null").SetValueAsync("null");
-                            yield return new WaitUntil(predicate: () => DBTaskSetUserFriends.IsCompleted);
-                            
-                            var DBTaskSetTraceScore = DBref.Child("users").Child(User.UserId).Child("TraceScore").SetValueAsync(0);
-                            yield return new WaitUntil(predicate: () => DBTaskSetTraceScore.IsCompleted);
-                            
-                            
-                            
-                            //if nothing has gone wrong try logging in with new users information
-                            
-                            StartCoroutine(Login(_email, _password, (myReturnValue) => {
-                                if (myReturnValue != null)
-                                {
-                                    Debug.LogWarning("failed to login");
-                                }
-                                else
-                                {
-                                    Debug.Log("Logged In!");
-                                }
-                            }));
-                            
-                            yield return null;
-                        }
-                    }
-                }
-                callback(null);
+                Debug.Log("Logged In!");
             }
-        }
+        }));
+        
+        callback(null);
     }
     
     //set 

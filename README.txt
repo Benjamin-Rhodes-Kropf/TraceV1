@@ -84,6 +84,7 @@
 -added database update to all values in register
 -added loading transition
 -added friends list into database
+-cleaned up FirebaseManager
 
 
 
