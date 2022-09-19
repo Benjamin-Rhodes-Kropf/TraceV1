@@ -164,7 +164,7 @@ public class FirebaseManager : MonoBehaviour
         }));
         
         //all database things that need to be activated
-        var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(true);
+        var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("isOnline").SetValueAsync(true);
         yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
         
         //stay logged in
@@ -173,6 +173,12 @@ public class FirebaseManager : MonoBehaviour
         PlayerPrefs.Save();
         
         callback(null);
+    }
+    private void writeNewUser(string userId, string username, string name, string email, string phone) {
+        User user = new User(username, name, email, phone);
+        string json = JsonUtility.ToJson(user);
+        Debug.Log("this is the json:" + json);
+        DBref.Child("users").Child(userId).SetRawJsonValueAsync(json);
     }
     
     private IEnumerator LogOut()
@@ -274,35 +280,43 @@ public class FirebaseManager : MonoBehaviour
             }
         });
         
-        //Todo: All of these could be put into one request? less cost?
+        //Todo: All of these could be put into one json request? less cost?
         
-        //setup other things associated with user that are not in firebase auth
-        var DBTaskSetUsername = DBref.Child("users").Child(User.UserId).Child("Username").SetValueAsync(_username);
-        yield return new WaitUntil(predicate: () => DBTaskSetUsername.IsCompleted);
         
+
+        //LOOK THESE HAVE BEEN PUT IN ONE JSON REQUEST
+        
+        // var DBTaskSetUsername = DBref.Child("users").Child(User.UserId).Child("Username").SetValueAsync(_username);
+        // yield return new WaitUntil(predicate: () => DBTaskSetUsername.IsCompleted);
+        
+        // var DBTaskSetPhoneNumber = DBref.Child("users").Child(User.UserId).Child("PhoneNumber").SetValueAsync(_phoneNumber);
+        // yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumber.IsCompleted);
+        
+        // var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(false);
+        // yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
+        
+        // var DBTaskSetFreindCount = DBref.Child("users").Child(User.UserId).Child("FriendCount").SetValueAsync(0);
+        // yield return new WaitUntil(predicate: () => DBTaskSetFreindCount.IsCompleted);
+        
+        // var DBTaskSetTraceScore = DBref.Child("users").Child(User.UserId).Child("TraceScore").SetValueAsync(0);
+        // yield return new WaitUntil(predicate: () => DBTaskSetTraceScore.IsCompleted);
+        
+        // var DBTaskSetLocation = DBref.Child("users").Child(User.UserId).Child("Location").SetValueAsync(null); // todo: get user location (later move to be under my friends)
+        // yield return new WaitUntil(predicate: () => DBTaskSetLocation.IsCompleted);
+        //ALL THIS ^ is now this:
+        writeNewUser(User.UserId.ToString(), _username, "null", _email, _phoneNumber);
+        
+        //external to user (still there must be a better way)
         var DBTaskSetUsernameLinkToId = DBref.Child("usernames").Child(_username).SetValueAsync(User.UserId);
         yield return new WaitUntil(predicate: () => DBTaskSetUsernameLinkToId.IsCompleted);
-
-        var DBTaskSetPhoneNumber = DBref.Child("users").Child(User.UserId).Child("PhoneNumber").SetValueAsync(_phoneNumber);
-        yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumber.IsCompleted);
         
         var DBTaskSetPhoneNumberLinkToId = DBref.Child("phoneNumbers").Child(User.UserId).Child(_phoneNumber).SetValueAsync(User.UserId);
         yield return new WaitUntil(predicate: () => DBTaskSetPhoneNumberLinkToId.IsCompleted);
-        
-        var DBTaskSetIsOnline = DBref.Child("users").Child(User.UserId).Child("IsOnline").SetValueAsync(false);
-        yield return new WaitUntil(predicate: () => DBTaskSetIsOnline.IsCompleted);
-        
-        var DBTaskSetLocation = DBref.Child("users").Child(User.UserId).Child("Location").SetValueAsync(null); // todo: get user location (later move to be under my friends)
-        yield return new WaitUntil(predicate: () => DBTaskSetLocation.IsCompleted);
-        
-        var DBTaskSetFreindCount = DBref.Child("users").Child(User.UserId).Child("FriendCount").SetValueAsync(0);
-        yield return new WaitUntil(predicate: () => DBTaskSetFreindCount.IsCompleted);
-        
+
         var DBTaskSetUserFriends = DBref.Child("friends").Child(User.UserId).Child("null").SetValueAsync("null");
         yield return new WaitUntil(predicate: () => DBTaskSetUserFriends.IsCompleted);
         
-        var DBTaskSetTraceScore = DBref.Child("users").Child(User.UserId).Child("TraceScore").SetValueAsync(0);
-        yield return new WaitUntil(predicate: () => DBTaskSetTraceScore.IsCompleted);
+        
         
         
         //if nothing has gone wrong try logging in with new users information
@@ -337,7 +351,6 @@ public class FirebaseManager : MonoBehaviour
             callback("successfully updated _username");
         }
     }
-    
     public IEnumerator SetUserProfilePhoto(Image _image, System.Action<String> callback)
         {
             String _profilePhotoUrl = "profileUrl";
@@ -380,7 +393,6 @@ public class FirebaseManager : MonoBehaviour
                 callback(_profilePhotoUrl);
             }
         }
-    
     public IEnumerator SetUserNickName(string _nickName, System.Action<String> callback)
     {
         Debug.Log("Db update nick to :" + _nickName);
