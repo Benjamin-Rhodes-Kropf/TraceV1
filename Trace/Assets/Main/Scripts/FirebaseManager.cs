@@ -121,7 +121,7 @@ public class FirebaseManager : MonoBehaviour
         var LoginTask = auth.SignInWithEmailAndPasswordAsync(_email, _password);
         
         yield return new WaitUntil(predicate: () => LoginTask.IsCompleted);
-
+        
         if (LoginTask.Exception != null)
         {
             //If there are errors handle them
@@ -316,10 +316,9 @@ public class FirebaseManager : MonoBehaviour
                 Debug.Log("Logged In!");
             }
         }));
-        
         callback(null);
     }
-    
+
     //set 
     public IEnumerator SetUsername(string _username, System.Action<String> callback)
     {
@@ -338,6 +337,7 @@ public class FirebaseManager : MonoBehaviour
             callback("successfully updated _username");
         }
     }
+    
     public IEnumerator SetUserProfilePhoto(Image _image, System.Action<String> callback)
         {
             String _profilePhotoUrl = "profileUrl";
@@ -345,6 +345,7 @@ public class FirebaseManager : MonoBehaviour
         
             if (user != null)
             {
+                //this shouldn't be done through firebase Auth
                 Firebase.Auth.UserProfile profile = new Firebase.Auth.UserProfile
                 {
                     DisplayName = user.DisplayName,
@@ -411,6 +412,18 @@ public class FirebaseManager : MonoBehaviour
         {
             callback("success");
         }
+    }
+    private void DeleteFile(String _location) 
+    { 
+        storageRef = storageRef.Child(_location);
+        storageRef.DeleteAsync().ContinueWithOnMainThread(task => {
+            if (task.IsCompleted) {
+                Debug.Log("File deleted successfully.");
+            }
+            else {
+                // Uh-oh, an error occurred!
+            }
+        });
     }
     
     //get
@@ -582,111 +595,5 @@ public class FirebaseManager : MonoBehaviour
         {
             callback(((DownloadHandlerTexture)request.downloadHandler).texture);
         }
-    }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    //OTHER
-    private IEnumerator TryUpdateUsernameAuth(string _username) {
-        //Create a user profile and set the username
-        UserProfile profile = new UserProfile { DisplayName = _username }; //Todo: add other user data that shouldn't be changed
-    
-        //Call the Firebase auth update user profile function passing the profile with the username
-        var ProfileTask = User.UpdateUserProfileAsync(profile);
-        //Wait until the task completes
-        yield return new WaitUntil(predicate: () => ProfileTask.IsCompleted);
-    
-        if (ProfileTask.Exception != null)
-        {
-            Debug.LogWarning(message: $"Failed to register task with {ProfileTask.Exception}");
-        }
-        else
-        {
-            //Auth username is now updated
-        }        
-    }
-    private IEnumerator TryUploadImage(string MediaUrl, System.Action<Texture> callback) 
-    {
-        UnityWebRequest request = UnityWebRequestTexture.GetTexture(MediaUrl); //Create a request
-        yield return request.SendWebRequest(); //Wait for the request to complete
-        if (request.isNetworkError || request.isHttpError)
-        {
-            Debug.Log(request.error);
-        }
-        else
-        {
-            callback(((DownloadHandlerTexture)request.downloadHandler).texture);
-        }
-    }
-    
-    private IEnumerator LoadUserData() {
-        //Get the currently logged in user data
-        var DBTask = DBref.Child("users").Child(User.UserId).GetValueAsync();
-
-        yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
-
-        if (DBTask.Exception != null)
-        {
-            Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
-        }
-        else if (DBTask.Result.Value == null)
-        {
-            //No data exists yet
-            
-        }
-        else
-        {
-            //Data has been retrieved
-            DataSnapshot snapshot = DBTask.Result;
-            // xpField.text = snapshot.Child("xp").Value.ToString();
-            // killsField.text = snapshot.Child("kills").Value.ToString();
-            // deathsField.text = snapshot.Child("deaths").Value.ToString();
-        }
-    }
-    private void DeleteFile(String _location) 
-    { 
-        storageRef = storageRef.Child(_location);
-        storageRef.DeleteAsync().ContinueWithOnMainThread(task => {
-            if (task.IsCompleted) {
-                Debug.Log("File deleted successfully.");
-            }
-            else {
-                // Uh-oh, an error occurred!
-            }
-        });
     }
 }
