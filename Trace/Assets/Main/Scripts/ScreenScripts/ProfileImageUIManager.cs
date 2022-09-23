@@ -69,7 +69,7 @@ public class ProfileImageUIManager : MonoBehaviour
     public void ChangeProfileImage()
     {
         String name = profileName.text;
-        StartCoroutine(FirebaseManager.instance.SetUserProfilePhoto(imageToUpload, (myReturnValue) =>
+        StartCoroutine(FirebaseManager.instance.SetUserProfilePhotoOld(imageToUpload, (myReturnValue) =>
         {
             if (myReturnValue != null)
             {

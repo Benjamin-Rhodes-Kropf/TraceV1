@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Globalization;
-using DG.Tweening;
-
-namespace Mapbox.Examples
+﻿namespace Mapbox.Examples
 {
 	using UnityEngine;
 	using Mapbox.Utils;
@@ -17,20 +12,17 @@ namespace Mapbox.Examples
 		[SerializeField]
 		AbstractMap _map;
 
-		[SerializeField] [Geocode] string[] _locationStrings;
-		
+		[SerializeField]
+		[Geocode]
+		string[] _locationStrings;
 		Vector2d[] _locations;
 
-		[SerializeField] float _spawnScale = 100f;
-		[SerializeField] GameObject _markerPrefab;
-		
-		[Header("move stuff")]
-		[SerializeField] private float _moveSpeed = 1f; 
-		[SerializeField] private float _mouseVelocityThreshold;
-		[SerializeField] private bool mouseDown;
-		[SerializeField] private float mouseDownTime;
+		[SerializeField]
+		float _spawnScale = 100f;
 
-		private float _moveSpeedScaleFactor = 0;
+		[SerializeField]
+		GameObject _markerPrefab;
+
 		List<GameObject> _spawnedObjects;
 
 		void Start()
@@ -50,40 +42,13 @@ namespace Mapbox.Examples
 
 		private void Update()
 		{
-			if (Input.GetMouseButtonDown(0))
-				mouseDown = true;
-			else if (Input.GetMouseButtonUp(0))
-				mouseDown = false;
-			
-			if (mouseDown)
-			{
-				mouseDownTime += 1 * Time.deltaTime;
-			}
-			else
-			{
-				mouseDownTime = 0;
-			}
-
 			int count = _spawnedObjects.Count;
 			for (int i = 0; i < count; i++)
 			{
 				var spawnedObject = _spawnedObjects[i];
 				var location = _locations[i];
-				
-				spawnedObject.transform.localPosition =_map.GeoToWorldPosition(location, true);
-				Vector3 _newPos = _map.GeoToWorldPosition(location, true);
-				
-				var _mouseVelocity = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")).magnitude;
-				if (_mouseVelocity > _mouseVelocityThreshold && mouseDown && mouseDownTime > 0.1f)
-				{
-					_moveSpeedScaleFactor = 10;
-					spawnedObject.transform.DOScale(new Vector3(0, 0, 0), 0.25f);
-				}
-				else if(!mouseDown)
-				{
-					_moveSpeedScaleFactor = 1;
-					spawnedObject.transform.DOScale(new Vector3(1, 1, 1), 0.5f);				
-				}
+				spawnedObject.transform.localPosition = _map.GeoToWorldPosition(location, true);
+				spawnedObject.transform.localScale = new Vector3(_spawnScale, _spawnScale, _spawnScale);
 			}
 		}
 	}

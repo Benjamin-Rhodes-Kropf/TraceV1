@@ -8,11 +8,11 @@ public class User {
     public string name;
     public string email;
     public string phone;
+    public string userPhotoUrl;
     public bool isOnline;
     public int friendCount;
     public int score;
     
-
     public User()
     {
         isOnline = false;
@@ -20,9 +20,10 @@ public class User {
         score = 0;
     }
 
-    public User(string username, string name, string email, string phone) {
+    public User(string username, string name, string userPhotoLink, string email, string phone) {
         this.username = username;
         this.name = name;
+        this.userPhotoUrl = userPhotoLink;
         this.email = email;
         this.phone = phone;
     }
