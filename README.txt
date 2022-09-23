@@ -86,6 +86,9 @@
 -added friends list into database
 -cleaned up FirebaseManager
 
+0.2.5
+-converted user profile photo to store in storage and pull from realtime database
+-made each user have an associated profile photo in database
 
 
 TO DO:
