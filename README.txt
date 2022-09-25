@@ -89,7 +89,9 @@
 0.2.5
 -converted user profile photo to store in storage and pull from realtime database
 -made each user have an associated profile photo in database
-
+-added basic vectors asset pack
+-added add friends popup screen
+-added user settings UI manager
 
 TO DO:
 -make playerprefs contain everything so user dosnt need to check db every time they do somthing
