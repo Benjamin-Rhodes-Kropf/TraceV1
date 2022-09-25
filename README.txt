@@ -92,6 +92,7 @@
 -added basic vectors asset pack
 -added add friends popup screen
 -added user settings UI manager
+-added swipe control
 
 TO DO:
 -make playerprefs contain everything so user dosnt need to check db every time they do somthing
