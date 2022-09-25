@@ -190,6 +190,7 @@ public class FirebaseManager : MonoBehaviour
     {
         PlayerPrefs.SetString("Username", "null");
         PlayerPrefs.SetString("Password", "null");
+        userImageTexture = null;
         auth.SignOut();
         yield return new WaitForSeconds(0.8f);
         _screenManager.PullUpOnboardingOptions();
@@ -248,7 +249,6 @@ public class FirebaseManager : MonoBehaviour
 
         //Create a user profile and set the username todo: set user profile image dynamically
         UserProfile profile = new UserProfile{DisplayName = _username, PhotoUrl = new Uri("https://firebasestorage.googleapis.com/v0/b/geosnapv1.appspot.com/o/ProfilePhotos%2FEmptyPhoto.jpg?alt=media&token=fbc8b18c-4bdf-44fd-a4ba-7ae881d3f063")};
-        
         var ProfileTask = fbUser.UpdateUserProfileAsync(profile);
         yield return new WaitUntil(predicate: () => ProfileTask.IsCompleted);
 
@@ -506,7 +506,12 @@ public class FirebaseManager : MonoBehaviour
                 url = task.Result + "";
                 Debug.Log("Actual  URL: " + url);
             }
+            else
+            {
+                Debug.Log("task failed:" + task.Result);
+            }
         });
+        
         yield return new WaitForSecondsRealtime(0.5f); //hmm not sure why (needs to wait for GetDownloadUrlAsync to complete)
         
         request = UnityWebRequestTexture.GetTexture((url)+"");
