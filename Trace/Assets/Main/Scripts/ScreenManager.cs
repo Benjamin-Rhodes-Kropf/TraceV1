@@ -58,6 +58,15 @@ public class ScreenManager : MonoBehaviour
         current = screen;
     }
 
+    public void EnterPhoto()
+    {
+        ScreenAnimator.SetTrigger("TakePhoto"); // trigger animation
+    }
+    public void ExitPhoto()
+    {
+        ScreenAnimator.SetTrigger("ExitPhoto"); // trigger animation
+    }
+
     public void PullUpOnboardingOptions()
     {
         _loadingPageUIManager.PullButtonsUp();
