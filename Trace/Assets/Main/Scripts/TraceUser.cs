@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class User {
+public class TraceUser {
     //they must be public for json utility conversion
     public string username;
     public string name;
@@ -13,14 +13,14 @@ public class User {
     public int friendCount;
     public int score;
     
-    public User()
+    public TraceUser()
     {
         isOnline = false;
         friendCount = 0;
         score = 0;
     }
 
-    public User(string username, string name, string userPhotoLink, string email, string phone) {
+    public TraceUser(string username, string name, string userPhotoLink, string email, string phone) {
         this.username = username;
         this.name = name;
         this.userPhotoUrl = userPhotoLink;

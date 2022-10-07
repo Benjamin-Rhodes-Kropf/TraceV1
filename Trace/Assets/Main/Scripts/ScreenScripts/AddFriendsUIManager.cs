@@ -30,7 +30,7 @@ public class AddFriendsUIManager : MonoBehaviour
             }
             else
             {
-                Debug.Log("db changed user nickName");
+                Debug.LogWarning("failed to find user");
             }
         }));
 
