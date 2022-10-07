@@ -90,6 +90,7 @@
 -converted user profile photo to store in storage and pull from realtime database
 -made each user have an associated profile photo in database
 -added photo animation
+-added search user by username
 
 
 TO DO:
