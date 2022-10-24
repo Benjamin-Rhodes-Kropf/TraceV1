@@ -17,10 +17,10 @@ using UnityEngine.UI;
 //using to simulate taking a photo on a phone (pick a file from desktop)
 using SimpleFileBrowser;
 
-public class FirebaseManager : MonoBehaviour
+public class FbManager : MonoBehaviour
 {
     //Dont Destroy
-    public static FirebaseManager instance;
+    public static FbManager instance;
     
     //Firebase References
     private DependencyStatus dependencyStatus;
@@ -99,7 +99,7 @@ public class FirebaseManager : MonoBehaviour
         if (savedUsername != "null" && savedPassword != "null")
         {
             Debug.Log("auto logging in");
-            StartCoroutine(FirebaseManager.instance.Login(savedUsername, savedPassword, (myReturnValue) => {
+            StartCoroutine(FbManager.instance.Login(savedUsername, savedPassword, (myReturnValue) => {
                 if (myReturnValue != null)
                 {
                     Debug.LogError("failed to autoLogin");
@@ -158,7 +158,7 @@ public class FirebaseManager : MonoBehaviour
         Debug.Log("logged In: user profile photo is: " + fbUser.PhotoUrl);
         
         //Load User Profile Texture
-        StartCoroutine(FirebaseManager.instance.GetMyUserProfilePhoto((myReturnValue) => {
+        StartCoroutine(FbManager.instance.GetMyUserProfilePhoto((myReturnValue) => {
             if (myReturnValue != null)
             {
                 userImageTexture = myReturnValue;
@@ -612,7 +612,7 @@ public class FirebaseManager : MonoBehaviour
     public void AddFriend(String _username)
     {
         String _nickName = "null";
-        StartCoroutine(FirebaseManager.instance.TryAddFriend(_username, _nickName, (myReturnValue) => {
+        StartCoroutine(FbManager.instance.TryAddFriend(_username, _nickName, (myReturnValue) => {
             if (myReturnValue != "Success")
             {
                 Debug.LogError("failed to update freinds");

@@ -29,9 +29,9 @@ public class ProfileImageUIManager : MonoBehaviour
     
     public void Update()
     {
-        if (FirebaseManager.instance.userImageTexture != null)
+        if (FbManager.instance.userImageTexture != null)
         {
-            _profileImageRaw.texture = FirebaseManager.instance.userImageTexture;
+            _profileImageRaw.texture = FbManager.instance.userImageTexture;
         }
     }
 
@@ -53,7 +53,7 @@ public class ProfileImageUIManager : MonoBehaviour
     }
     public void SetProfileNickName()
     {
-        StartCoroutine(FirebaseManager.instance.SetUserNickName(profileName.text, (myReturnValue) =>
+        StartCoroutine(FbManager.instance.SetUserNickName(profileName.text, (myReturnValue) =>
         {
             if (myReturnValue != null)
             {
@@ -73,6 +73,6 @@ public class ProfileImageUIManager : MonoBehaviour
     
     public void Login()
     {
-        StartCoroutine(FirebaseManager.instance.AutoLogin());
+        StartCoroutine(FbManager.instance.AutoLogin());
     }
 }

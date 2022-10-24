@@ -28,7 +28,7 @@ public class AddFriendsUIManager : MonoBehaviour
     
     public void SearchForUser()
     {
-        StartCoroutine(FirebaseManager.instance.SearchForUserByUsername(friendSearchBar.text, (myReturnValue) =>
+        StartCoroutine(FbManager.instance.SearchForUserByUsername(friendSearchBar.text, (myReturnValue) =>
         {
             if (myReturnValue.IsSuccessful)
             {

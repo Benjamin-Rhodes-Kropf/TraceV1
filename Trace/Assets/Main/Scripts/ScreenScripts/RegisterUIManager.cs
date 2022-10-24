@@ -54,7 +54,7 @@ public class RegisterUIManager : MonoBehaviour
         var _userPhoneNumber = PhoneNumber(phoneNumber.text);
         
         //Call the register coroutine passing the email, password, and username
-        StartCoroutine(FirebaseManager.instance.RegisterNewUser(emailRegisterField.text, passwordRegisterField.text, usernameRegisterField.text,_userPhoneNumber,  (myReturnValue) => {
+        StartCoroutine(FbManager.instance.RegisterNewUser(emailRegisterField.text, passwordRegisterField.text, usernameRegisterField.text,_userPhoneNumber,  (myReturnValue) => {
             if (myReturnValue != null)
             {
                 confirmRegisterText.text = "";

@@ -94,7 +94,7 @@
 
 0.2.6
 -stripped away fb auth
-
+-renamed FirebaseManager to work with git ignore
 
 TO DO:
 -make playerprefs contain everything so user dosnt need to check db every time they do somthing

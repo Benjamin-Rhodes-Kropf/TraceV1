@@ -12,7 +12,7 @@ public class UserSettingsManager : MonoBehaviour
     private void OnEnable()
     {
         Debug.Log("profile settings enabled");
-        _profileImage.texture = FirebaseManager.instance.userImageTexture;
+        _profileImage.texture = FbManager.instance.userImageTexture;
     }
 
 
