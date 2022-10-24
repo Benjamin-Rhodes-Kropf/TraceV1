@@ -16,6 +16,7 @@ using UnityEngine.UI;
 
 //using to simulate taking a photo on a phone (pick a file from desktop)
 using SimpleFileBrowser;
+using Object = System.Object;
 
 public class FbManager : MonoBehaviour
 {
@@ -586,8 +587,10 @@ public class FbManager : MonoBehaviour
             }));
         }
     }
-    public IEnumerator MakeFriendshipRequest(string _userID, System.Action<String> callback)
+    public IEnumerator MakeFriendshipRequest(string _userID, System.Action<CallbackObject> callback)
     {
+        CallbackObject callbackObject = new CallbackObject();
+        
         Debug.Log("Db making friendship reuest to:" + _userID);
         //Set the currently logged in user nickName in the database
         //Todo: make it a list or somthing IDK!!!
@@ -598,11 +601,53 @@ public class FbManager : MonoBehaviour
         if (DBTask.Exception != null)
         {
             Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
+            callbackObject.IsSuccessful = false;
+            callback(callbackObject);
         }
         else
         {
-            callback("success");
+            callbackObject.IsSuccessful = true;
+            callbackObject.message = "";
+            callback(callbackObject);
         }
+    }
+    
+    public IEnumerator MakeFriendshipRequestNew(string _userID, System.Action<CallbackObject> callback)
+    {
+        CallbackObject callbackObject = new CallbackObject();
+        
+        Debug.Log("Db making friendship reuest to:" + _userID);
+        
+        string key = DBref.Child("friendRequests").Child(fbUser.UserId).Push().Key;
+        Dictionary<string, Object> childUpdates = new Dictionary<string, Object>();
+        childUpdates["/friendRequests/" + fbUser.UserId + "/" + key] = _userID;
+        DBref.UpdateChildrenAsync(childUpdates);
+
+        yield return new WaitForSeconds(0.1f);
+        
+        callbackObject.IsSuccessful = true;
+        callbackObject.message = "";
+        callback(callbackObject);
+        
+        //Set the currently logged in user nickName in the database
+        //Todo: make it a list or somthing IDK!!!
+        // var DBTask = DBref.Child("friendRequests").Child(_userID).Child(fbUser.UserId).SetValueAsync(fbUser.UserId);
+        //
+        // yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
+        //
+        // if (DBTask.Exception != null)
+        // {
+        //     Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
+        //     callbackObject.IsSuccessful = false;
+        //     callback(callbackObject);
+        // }
+        // else
+        // {
+        //     callbackObject.IsSuccessful = true;
+        //     callbackObject.message = "";
+        //     callback(callbackObject);
+        // }
+        
     }
 
     

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Mapbox.Json.Bson;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -47,10 +48,26 @@ public class AddFriendsUIManager : MonoBehaviour
 
     public void RequestFriendWithSearchedUser()
     {
-        //if there is no user
-        //return with somthin along the lines of "you have to search a valid user first"
-        //else
-        //call firebase manager request friendship
+        if (searchedUserID == "")
+        {
+            //Todo: update visuals accordingly
+            //return with smth along the lines of "you have to search a valid user first"
+            return;
+        }
+        //else make friend request
+        StartCoroutine(FbManager.instance.MakeFriendshipRequestNew(searchedUserID,  (callbackObject) => {
+            if (!callbackObject.IsSuccessful)
+            {
+                //todo: make visual for non-valid return
+                // confirmRegisterText.text = "";
+                // warningRegisterText.text = myReturnValue;
+                return;
+            }
+            //todo: make visual for valid return
+            // warningRegisterText.text = "";
+            // confirmRegisterText.text = "Confirmed, Account Created!";
+            Debug.Log("friend requested at:" + searchedUserID);
+        }));
     }
     
 
