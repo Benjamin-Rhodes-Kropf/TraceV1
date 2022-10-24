@@ -92,6 +92,9 @@
 -added photo animation
 -added search user by username
 
+0.2.6
+-stripped away fb auth
+
 
 TO DO:
 -make playerprefs contain everything so user dosnt need to check db every time they do somthing
