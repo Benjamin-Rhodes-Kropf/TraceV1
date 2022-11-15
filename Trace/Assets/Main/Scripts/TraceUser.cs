@@ -12,6 +12,7 @@ public class TraceUser {
     public bool isOnline;
     public int friendCount;
     public int score;
+
     
     public TraceUser()
     {

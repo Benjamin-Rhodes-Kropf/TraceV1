@@ -96,6 +96,10 @@
 -stripped away fb auth
 -renamed FirebaseManager to work with git ignore
 
+0.2.7
+-added friend request's
+
+
 TO DO:
 -make playerprefs contain everything so user dosnt need to check db every time they do somthing
 -add phone number verification

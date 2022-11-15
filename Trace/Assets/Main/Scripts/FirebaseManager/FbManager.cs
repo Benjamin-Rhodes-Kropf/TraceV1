@@ -31,7 +31,7 @@ public class FbManager : MonoBehaviour
     private FirebaseStorage storage;
     private StorageReference storageRef;
     
-    //Custom  user 
+    //Trace User
     private TraceUser traceUser;
     
     [Header("Firebase")]
@@ -40,10 +40,10 @@ public class FbManager : MonoBehaviour
     [Header("ScreenManager")] 
     [SerializeField] private ScreenManager _screenManager;
     
-    [Header("UserData")] 
+    [Header("Trace User Data")] 
     public Texture userImageTexture;
     
-    [Header("DatabaseTest")]
+    [Header("Database Test Assets")]
     public RawImage rawImage;
     public RawImage testRawImage;
     
@@ -87,6 +87,10 @@ public class FbManager : MonoBehaviour
         FileBrowser.SetDefaultFilter(".jpg");
         FileBrowser.SetExcludedExtensions(".lnk", ".tmp", ".zip", ".rar", ".exe");
     }
+
+    #region This User
+    
+    #region Valdiation Of User
     public void LogOutOfAccount()
     {
         StartCoroutine(LogOut());
@@ -186,9 +190,9 @@ public class FbManager : MonoBehaviour
         yield return new WaitForSeconds(0.8f);
         _screenManager.PullUpOnboardingOptions();
     }
-    
-    
-    //REGISTER
+    #endregion
+
+    #region Register New User
     private string GenerateUserProfileJson(string username, string name, string userPhotoLink, string email, string phone) {
         TraceUser user = new TraceUser(username, name, userPhotoLink, email, phone);
         string json = JsonUtility.ToJson(user);
@@ -308,8 +312,9 @@ public class FbManager : MonoBehaviour
         }));
         callback(null);
     }
-
-    //SET
+    #endregion
+    
+    #region Edit This Users Information
     public IEnumerator SetUsername(string _username, System.Action<String> callback)
     {
         Debug.Log("Db SetUsername to :" + _username);
@@ -375,20 +380,9 @@ public class FbManager : MonoBehaviour
             callback("success");
         }
     }
-    private void DeleteFile(String _location) 
-    { 
-        storageRef = storageRef.Child(_location);
-        storageRef.DeleteAsync().ContinueWithOnMainThread(task => {
-            if (task.IsCompleted) {
-                Debug.Log("File deleted successfully.");
-            }
-            else {
-                // Uh-oh, an error occurred!
-            }
-        });
-    }
-    
-    //GET
+    #endregion
+
+    #region Get This Users Components
     public IEnumerator GetMyUserProfilePhoto(System.Action<Texture> callback)
     {
         var request = new UnityWebRequest();
@@ -455,6 +449,13 @@ public class FbManager : MonoBehaviour
             callback(DBTask.Result.ToString());
         }
     }
+    #endregion
+    
+    #endregion
+
+    #region Other User
+    
+    #region Query Database For User
     public IEnumerator SearchForUserIDByUsername(String username, System.Action<CallbackObject> callback)
     {
         CallbackObject callbackObject = new CallbackObject();
@@ -513,6 +514,9 @@ public class FbManager : MonoBehaviour
             }
         }));
     }
+    #endregion
+
+    #region Query Database for Other Users Components
     public IEnumerator GetUserProfilePhotoByUrl(string _url, System.Action<CallbackObject> callback)
     {
         CallbackObject callbackObject = new CallbackObject();
@@ -587,32 +591,11 @@ public class FbManager : MonoBehaviour
             }));
         }
     }
-    public IEnumerator MakeFriendshipRequest(string _userID, System.Action<CallbackObject> callback)
-    {
-        CallbackObject callbackObject = new CallbackObject();
-        
-        Debug.Log("Db making friendship reuest to:" + _userID);
-        //Set the currently logged in user nickName in the database
-        //Todo: make it a list or somthing IDK!!!
-        var DBTask = DBref.Child("friendRequests").Child(_userID).Child(fbUser.UserId).SetValueAsync(fbUser.UserId);
-
-        yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
-
-        if (DBTask.Exception != null)
-        {
-            Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
-            callbackObject.IsSuccessful = false;
-            callback(callbackObject);
-        }
-        else
-        {
-            callbackObject.IsSuccessful = true;
-            callbackObject.message = "";
-            callback(callbackObject);
-        }
-    }
+    #endregion
+    #endregion
     
-    public IEnumerator MakeFriendshipRequestNew(string _userID, System.Action<CallbackObject> callback)
+    #region Friend Requests
+    public IEnumerator MakeFriendshipRequest(string _userID, System.Action<CallbackObject> callback)
     {
         CallbackObject callbackObject = new CallbackObject();
         
@@ -628,36 +611,88 @@ public class FbManager : MonoBehaviour
         callbackObject.IsSuccessful = true;
         callbackObject.message = "";
         callback(callbackObject);
-        
-        //Set the currently logged in user nickName in the database
-        //Todo: make it a list or somthing IDK!!!
-        // var DBTask = DBref.Child("friendRequests").Child(_userID).Child(fbUser.UserId).SetValueAsync(fbUser.UserId);
-        //
-        // yield return new WaitUntil(predicate: () => DBTask.IsCompleted);
-        //
-        // if (DBTask.Exception != null)
-        // {
-        //     Debug.LogWarning(message: $"Failed to register task with {DBTask.Exception}");
-        //     callbackObject.IsSuccessful = false;
-        //     callback(callbackObject);
-        // }
-        // else
-        // {
-        //     callbackObject.IsSuccessful = true;
-        //     callbackObject.message = "";
-        //     callback(callbackObject);
-        // }
-        
+    }
+    
+    public List<string> GetFriendShipRequests()
+    {
+        List<string> listOfFriends = new List<string>();
+        FirebaseDatabase.DefaultInstance.GetReference("friendRequests").Child(fbUser.UserId).GetValueAsync().ContinueWithOnMainThread(task => {
+                if (task.IsFaulted)
+                {
+                    return;
+                }
+                else if (task.IsCompleted) {
+                    DataSnapshot snapshot = task.Result;
+                    foreach (var child in snapshot.Children)
+                    {
+                        Debug.Log("data snapshot of friends child value:"+child.Value);
+                        listOfFriends.Add(child.Value.ToString());
+                    }
+                }
+        });
+        return listOfFriends;
+    }
+    public void SubscribeToFriendShipRequests()
+    {
+        var refrence = FirebaseDatabase.DefaultInstance.GetReference("friendRequests").Child(fbUser.UserId);
+        refrence.ChildAdded += HandleChildAdded;
+        refrence.ChildChanged += HandleChildChanged;
+        refrence.ChildRemoved += HandleChildRemoved;
+        refrence.ChildMoved += HandleChildMoved;
+
+        void HandleChildAdded(object sender, ChildChangedEventArgs args) {
+            if (args.DatabaseError != null) {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            // Do something with the data in args.Snapshot
+            Debug.Log("child added:" +args.Snapshot);
+            Debug.Log("value:" +  args.Snapshot.GetRawJsonValue());
+        }
+
+        void HandleChildChanged(object sender, ChildChangedEventArgs args) {
+            if (args.DatabaseError != null) {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            // Do something with the data in args.Snapshot
+            Debug.Log("child changed:" +args.Snapshot);
+            Debug.Log("value:" +  args.Snapshot.GetRawJsonValue());
+        }
+
+        void HandleChildRemoved(object sender, ChildChangedEventArgs args) {
+            if (args.DatabaseError != null) {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            // Do something with the data in args.Snapshot
+            Debug.Log("child removed:" +args.Snapshot);
+            Debug.Log("value:" +  args.Snapshot.GetRawJsonValue());
+        }
+
+        void HandleChildMoved(object sender, ChildChangedEventArgs args) {
+            if (args.DatabaseError != null) {
+                Debug.LogError(args.DatabaseError.Message);
+                return;
+            }
+            // Do something with the data in args.Snapshot
+            Debug.Log("child moved:" +args.Snapshot);
+            Debug.Log("value:" +  args.Snapshot.GetRawJsonValue());
+        }
     }
 
-    
+
+    //Future Functions
+    //GetFriendshipRequests
+    //AcceptFriendshipRequest
+    //getPhotos
     
     
     //TESTING
     public void AddFriend(String _username)
     {
         String _nickName = "null";
-        StartCoroutine(FbManager.instance.TryAddFriend(_username, _nickName, (myReturnValue) => {
+        StartCoroutine(FbManager.instance.AcceptFriend(_username, _nickName, (myReturnValue) => {
             if (myReturnValue != "Success")
             {
                 Debug.LogError("failed to update freinds");
@@ -668,7 +703,7 @@ public class FbManager : MonoBehaviour
             }
         }));
     }
-    private IEnumerator TryAddFriend(string _username, string _nickName, System.Action<String> callback)
+    private IEnumerator AcceptFriend(string _username, string _nickName, System.Action<String> callback)
     {
         var DBTask = DBref.Child("users").Child(fbUser.UserId).Child("Friends").Child(_username).SetValueAsync(_nickName);
         
@@ -683,6 +718,11 @@ public class FbManager : MonoBehaviour
             callback("Success");
         }
     }
+    
+    #endregion
+    
+    
+    
     public void getTestImage()
     {
         StartCoroutine(GetTestImage((myReturnValue) => {
@@ -711,6 +751,18 @@ public class FbManager : MonoBehaviour
     }
     //
 
+    private void DeleteFile(String _location) 
+    { 
+        storageRef = storageRef.Child(_location);
+        storageRef.DeleteAsync().ContinueWithOnMainThread(task => {
+            if (task.IsCompleted) {
+                Debug.Log("File deleted successfully.");
+            }
+            else {
+                // Uh-oh, an error occurred!
+            }
+        });
+    }
     
     //upload image to simulate taking photo
     public void UploadProfileImage()

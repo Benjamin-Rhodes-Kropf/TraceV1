@@ -1,14 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Mapbox.Json.Bson;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 
-public class AddFriendsUIManager : MonoBehaviour
+public class FindFriendsUIManager : MonoBehaviour
 {
     [SerializeField] private TMP_InputField friendSearchBar;
     [SerializeField] private string searchedUserID;
@@ -17,20 +15,19 @@ public class AddFriendsUIManager : MonoBehaviour
     void OnDisable()
     {
         searchedUserID = "";
-        Debug.Log("AddFriendsUIManager: script was disabled");
+        Debug.Log("FindFriendsUIManager: script was disabled");
     }
 
     void OnEnable()
     {
         searchedUserID = "";
-        Debug.Log("AddFriendsUIManager: script was enabled");
+        Debug.Log("FindFriendsUIManager: script was enabled");
         friendSearchBar.text = "";
     }
     
     public void SearchForUser()
     {
-        StartCoroutine(FbManager.instance.SearchForUserByUsername(friendSearchBar.text, (myReturnValue) =>
-        {
+        StartCoroutine(FbManager.instance.SearchForUserByUsername(friendSearchBar.text, (myReturnValue) => {
             if (myReturnValue.IsSuccessful)
             {
                 Debug.Log("search returned user");
@@ -45,7 +42,6 @@ public class AddFriendsUIManager : MonoBehaviour
             }
         }));
     }
-
     public void RequestFriendWithSearchedUser()
     {
         if (searchedUserID == "")
@@ -55,7 +51,7 @@ public class AddFriendsUIManager : MonoBehaviour
             return;
         }
         //else make friend request
-        StartCoroutine(FbManager.instance.MakeFriendshipRequestNew(searchedUserID,  (callbackObject) => {
+        StartCoroutine(FbManager.instance.MakeFriendshipRequest(searchedUserID,  (callbackObject) => {
             if (!callbackObject.IsSuccessful)
             {
                 //todo: make visual for non-valid return
