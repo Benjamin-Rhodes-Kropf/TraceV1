@@ -13,6 +13,7 @@
             if (TryGetComponent(out Image image))
                 image.color = color;
             if (TryGetComponent(out SpriteRenderer sr))
+                //sr.sprite.texture.
                 sr.color = color;
             if (TryGetComponent(out Camera cam))
                 cam.backgroundColor = color;
